@@ -80,60 +80,63 @@ namespace client_csharp
             receiveThread.Start();
         }
         // Xử lý tất cả thông điệp từ server
-private void HandleServerMessage(string message)
-{
-    var messages = message.Split('\n');
-    foreach (var msg in messages)
-    {
-        if (string.IsNullOrWhiteSpace(msg)) continue;
-
-        // Gián đoạn phòng
-        if (msg.Contains("OPPONENT_LEFT"))
+        private void HandleServerMessage(string message)
         {
-            Console.WriteLine(" Đối thủ đã rời khỏi phòng, trận đấu bị gián đoạn.");
-            Disconnect();
-            isRunning = false;
-
-            Console.Write(" Bạn có muốn quay lại sảnh không? (y/n): ");
-            string choice = Console.ReadLine()?.Trim().ToLower();
-            if (choice == "y")
+            var messages = message.Split('\n');
+            foreach (var msg in messages)
             {
-                Console.WriteLine(" Quay lại sảnh...");
-                ConnectToServer(); // hoặc gọi menu chính
+                if (string.IsNullOrWhiteSpace(msg)) continue;
+
+                // Xử lý phòng bị gián đoạn
+                if (msg.Contains("OPPONENT_LEFT"))
+                {
+                    Console.WriteLine(" Đối thủ đã thoát khỏi phòng. Trận đấu bị gián đoạn.");
+                    Console.WriteLine(" Bạn có muốn quay lại sảnh không? (y/n)");
+
+                    // Ngắt kết nối khỏi server
+                    Disconnect();
+
+                    // Dừng vòng lặp game
+                    isRunning = false;
+
+                    string choice = Console.ReadLine()?.Trim().ToLower();
+                    if (choice == "y")
+                    {
+                        Console.WriteLine("🏠 Đang trở về sảnh...");
+                        // Ở đây bạn có thể gọi lại ConnectToServer() để tái kết nối hoặc load menu chính
+                    }
+                    else
+                    {
+                        Console.WriteLine("👋 Cảm ơn bạn đã chơi!");
+                        Environment.Exit(0);
+                    }
+                }
+                else if (msg.Contains("ERROR ServerFull"))
+                {
+                    Console.WriteLine("🚫 Server đang quá tải, không thể tạo phòng mới. Vui lòng thử lại sau.");
+                }
+                else if (msg.Contains("GAME_OVER"))
+                {
+                    Console.WriteLine("🏁 Trò chơi đã kết thúc: " + msg);
+                }
+                else if (msg.Contains("YOUR_TURN"))
+                {
+                    Console.WriteLine("🎯 Đến lượt bạn đánh!");
+                }
+                else if (msg.Contains("MOVE_OK"))
+                {
+                    Console.WriteLine($"✅ Nước đi hợp lệ: {msg}");
+                }
+                else if (msg.Contains("WELCOME"))
+                {
+                    Console.WriteLine($"👋 Kết nối thành công: {msg}");
+                }
+                else
+                {
+                    Console.WriteLine($" Thông điệp từ server: {msg}");
+                }
             }
-            else
-            {
-                Console.WriteLine(" Cảm ơn bạn đã chơi!");
-                Environment.Exit(0);
-            }
         }
-        //  Các thông điệp khác
-        else if (msg.Contains("ERROR ServerFull"))
-        {
-            Console.WriteLine("🚫 Server quá tải, không thể tạo phòng mới.");
-        }
-        else if (msg.Contains("GAME_OVER"))
-        {
-            Console.WriteLine("🏁 Trò chơi kết thúc: " + msg);
-        }
-        else if (msg.Contains("YOUR_TURN"))
-        {
-            Console.WriteLine("🎯 Đến lượt bạn đánh!");
-        }
-        else if (msg.Contains("MOVE_OK"))
-        {
-            Console.WriteLine($"✅ Nước đi hợp lệ: {msg}");
-        }
-        else if (msg.Contains("WELCOME"))
-        {
-            Console.WriteLine($"👋 Kết nối thành công: {msg}");
-        }
-        else
-        {
-            Console.WriteLine($"Thông điệp từ Server: {msg}");
-        }
-    }
-}
 
         // 🔹 Gửi dữ liệu tới server
         public void SendData(string message)

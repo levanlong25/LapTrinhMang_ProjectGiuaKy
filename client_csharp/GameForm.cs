@@ -1,12 +1,14 @@
 // Code giao diện Windows Forms sẽ thêm ở đây
 
 using System;
+using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
 
 namespace client_csharp
 {
+    [DebuggerDisplay($"{{{nameof(GetDebuggerDisplay)}(),nq}}")]
     public partial class GameForm : Form
     {
         private ClientSocket client;
@@ -21,7 +23,7 @@ namespace client_csharp
         public GameForm(ClientSocket clientSocket)
         {
             this.client = clientSocket;
-            InitializeComponent();
+           
             BuildUI();
 
             // 🔹 Lắng nghe phản hồi từ server (cập nhật UI khi có dữ liệu)
@@ -192,84 +194,10 @@ namespace client_csharp
             myTurn = true;
             lblStatus.Text = "Bàn cờ đã được reset, tới lượt bạn!";
         }
-    }
-}
 
-
-private void OnCellClick(object sender, EventArgs e)
-{
-    if (!myTurn)
-    {
-        MessageBox.Show("⏳ Chưa tới lượt của bạn!");
-        return;
-    }
-
-    Button btn = sender as Button;
-    if (btn == null || btn.Text != "") return;
-
-    btn.Text = "X";
-    myTurn = false;
-    lblStatus.Text = "Đã đánh nước đi, chờ đối thủ...";
-
-    int row = -1, col = -1;
-    for (int i = 0; i < 3; i++)
-        for (int j = 0; j < 3; j++)
-            if (buttons[i, j] == btn)
-            {
-                row = i; col = j;
-                break;
-            }
-
-    string move = $"MOVE:X,{row},{col}";
-    client.SendData(move);
-}
-
-
-private void HandleServerMessage(string message)
-{
-    if (this.InvokeRequired)
-    {
-        this.Invoke(new Action(() => HandleServerMessage(message)));
-        return;
-    }
-
-    if (message.StartsWith("MOVE:"))
-    {
-        // đối thủ đi
-        string[] parts = message.Replace("MOVE:", "").Split(',');
-        string player = parts[0];
-        int row = int.Parse(parts[1]);
-        int col = int.Parse(parts[2]);
-
-        buttons[row, col].Text = player;
-        lblStatus.Text = $"Đối thủ ({player}) đã đi ô ({row},{col})";
-        myTurn = true;
-    }
-    else if (message.StartsWith("WIN:"))
-    {
-        // người thắng và highlight 3 ô
-        string[] parts = message.Replace("WIN:", "").Split(',');
-        string player = parts[0];
-        string[] cells = parts[1].Split(';');
-
-        foreach (string cell in cells)
+        private string GetDebuggerDisplay()
         {
-            string[] xy = cell.Split(',');
-            int r = int.Parse(xy[0]);
-            int c = int.Parse(xy[1]);
-            buttons[r, c].BackColor = Color.Yellow;
+            return ToString();
         }
-
-        lblStatus.Text = $"🎉 Người chơi {player} thắng!";
-        myTurn = false;
-    }
-    else if (message.StartsWith("RESET"))
-    {
-        ResetBoard();
-        lblStatus.Text = "Bàn cờ đã được reset.";
-    }
-    else if (message.StartsWith("STATUS:"))
-    {
-        lblStatus.Text = message.Replace("STATUS:", "");
     }
 }

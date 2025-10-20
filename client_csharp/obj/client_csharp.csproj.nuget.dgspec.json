@@ -1,0 +1,64 @@
+{
+  "format": 1,
+  "restore": {
+    "C:\\Users\\tremn\\OneDrive\\Desktop\\LapTrinhMang_ProjectGiuaKy\\client_csharp\\client_csharp.csproj": {}
+  },
+  "projects": {
+    "C:\\Users\\tremn\\OneDrive\\Desktop\\LapTrinhMang_ProjectGiuaKy\\client_csharp\\client_csharp.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "C:\\Users\\tremn\\OneDrive\\Desktop\\LapTrinhMang_ProjectGiuaKy\\client_csharp\\client_csharp.csproj",
+        "projectName": "client_csharp",
+        "projectPath": "C:\\Users\\tremn\\OneDrive\\Desktop\\LapTrinhMang_ProjectGiuaKy\\client_csharp\\client_csharp.csproj",
+        "packagesPath": "C:\\Users\\tremn\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\tremn\\OneDrive\\Desktop\\LapTrinhMang_ProjectGiuaKy\\client_csharp\\obj\\",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "C:\\Users\\tremn\\AppData\\Roaming\\NuGet\\NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0-windows"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0-windows7.0": {
+            "targetAlias": "net8.0-windows",
+            "projectReferences": {}
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        }
+      },
+      "frameworks": {
+        "net8.0-windows7.0": {
+          "targetAlias": "net8.0-windows",
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            },
+            "Microsoft.WindowsDesktop.App.WindowsForms": {
+              "privateAssets": "none"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.121/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    }
+  }
+}

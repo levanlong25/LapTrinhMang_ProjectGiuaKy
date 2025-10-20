@@ -212,3 +212,38 @@ namespace client_csharp
         }
     }
 }
+
+
+// sự kiện gửi thông điệp đến Form
+public event Action<string> OnServerMessage;
+
+private void StartReceiveLoop()
+{
+    Thread receiveThread = new Thread(() =>
+    {
+        try
+        {
+            while (true)
+            {
+                if (stream == null || !client.Connected) break;
+
+                byte[] buffer = new byte[1024];
+                int bytesRead = stream.Read(buffer, 0, buffer.Length);
+                if (bytesRead == 0) break;
+
+                string message = Encoding.UTF8.GetString(buffer, 0, bytesRead);
+                Console.WriteLine("\n📩 Từ server: " + message);
+
+                // 🔹 gửi dữ liệu sang Form
+                OnServerMessage?.Invoke(message);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"⚠️ Lỗi nhận dữ liệu: {ex.Message}");
+        }
+    });
+
+    receiveThread.IsBackground = true;
+    receiveThread.Start();
+}

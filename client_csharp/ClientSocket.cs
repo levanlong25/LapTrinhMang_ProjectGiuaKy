@@ -72,6 +72,11 @@ namespace client_csharp
 
                         string message = Encoding.UTF8.GetString(buffer, 0, bytesRead);
                         Console.WriteLine($"\n📩 Từ server: {message}");
+
+                        // ✅ Thêm hai dòng này để xử lý message
+                        HandleServerMessage(message);
+                        OnServerMessage?.Invoke(message);
+
                     }
                 }
                 catch (Exception ex)

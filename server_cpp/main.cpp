@@ -200,8 +200,19 @@ public:
         return std::to_string(rand() % 9000 + 1000); // ID 4 chữ số từ 1000-9999
     }
 
+    
+
+    // ✅ Kiểm tra server quá tải
+
     std::shared_ptr<GameRoom> createRoom(SOCKET clientSocket) {
         std::lock_guard<std::mutex> lock(manager_mutex);
+        
+        if (rooms.size() >= 10) { // giới hạn 10 phòng
+        std::cout << "[WARN] Server full, cannot create more rooms." << std::endl;  
+        send_message(clientSocket, "ERROR ServerFull");
+        return nullptr;
+        }
+
         std::string newId;
         do {
             newId = generateRoomId();
@@ -353,7 +364,9 @@ void handle_client(SOCKET clientSocket) {
 
                 if (cmd == "CREATE_ROOM") {
                     auto room = manager->createRoom(clientSocket);
+                    if (room != nullptr)
                     send_message(clientSocket, "ROOM_CREATED " + room->getId());
+
                 }
                 else if (cmd == "JOIN_ROOM") {
                     std::string roomId;

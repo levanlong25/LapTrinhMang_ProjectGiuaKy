@@ -126,8 +126,9 @@ namespace client_csharp
                         break;
                     }
 
-            string move = $"MOVE:X,{row},{col}";
+            string move = $"MOVE {row} {col}\n";
             client.SendData(move);
+
         }
 
         // ------------------ XỬ LÝ DỮ LIỆU TỪ SERVER ------------------

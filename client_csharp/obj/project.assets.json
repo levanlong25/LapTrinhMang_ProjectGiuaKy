@@ -13,11 +13,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\tremn\\OneDrive\\Desktop\\LapTrinhMang_ProjectGiuaKy\\client_csharp\\client_csharp.csproj",
+      "projectUniqueName": "D:\\LapTrinhMang_ProjectGiuaKy\\client_csharp\\client_csharp.csproj",
       "projectName": "client_csharp",
-      "projectPath": "C:\\Users\\tremn\\OneDrive\\Desktop\\LapTrinhMang_ProjectGiuaKy\\client_csharp\\client_csharp.csproj",
+      "projectPath": "D:\\LapTrinhMang_ProjectGiuaKy\\client_csharp\\client_csharp.csproj",
       "packagesPath": "C:\\Users\\tremn\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\tremn\\OneDrive\\Desktop\\LapTrinhMang_ProjectGiuaKy\\client_csharp\\obj\\",
+      "outputPath": "D:\\LapTrinhMang_ProjectGiuaKy\\client_csharp\\obj\\",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "C:\\Users\\tremn\\AppData\\Roaming\\NuGet\\NuGet.Config"

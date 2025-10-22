@@ -4,21 +4,18 @@
 #include <thread>
 #include <mutex>
 #include <sstream>
-#include <algorithm>
 #include <memory>
 #include <unordered_map>
 #include <cstdlib>
 #include <ctime>
+#include <array>
 
-// --- Thư viện Socket đa nền tảng ---
 #ifdef _WIN32
-    // Dành cho Windows (Winsock)
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #pragma comment(lib, "ws2_32.lib")
 using socklen_t = int;
 #else
-    // Dành cho Linux, macOS
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <unistd.h>
@@ -29,149 +26,120 @@ const int SOCKET_ERROR = -1;
 #define closesocket(s) close(s)
 #endif
 
-// --- Cấu hình Server ---
-const int PORT = 5000;
-const int BUFFER_SIZE = 1024;
-const int BOARD_SIZE = 3;
-const int WIN_CONDITION = 3; 
+using namespace std;
 
-// --- Khai báo các lớp logic game ---
+// --- Server Config ---
+constexpr int PORT = 5000;
+constexpr int BUFFER_SIZE = 1024;
+constexpr int BOARD_SIZE = 3;
+constexpr int WIN_CONDITION = 3;
+
+// --- Game Logic ---
 enum class CellState { Empty, X, O };
 enum class PlayerMark { X, O };
 
-// Hàm gửi tin nhắn (thêm \n)
-void send_message(SOCKET clientSocket, const std::string& message) {
-    std::string full_msg = message + "\n";
-    send(clientSocket, full_msg.c_str(), full_msg.length(), 0);
+void send_message(SOCKET clientSocket, const string& message) {
+    string msg = message + "\n";
+    send(clientSocket, msg.c_str(), static_cast<int>(msg.length()), 0);
 }
 
-// --- Lớp GameRoom ---
+// --- GameRoom Class ---
 class GameRoom {
-private:
-    std::string id;
-    std::vector<SOCKET> players; // Tối đa 2 players
-    std::vector<std::vector<CellState>> board;
-    std::mutex room_mutex;
+    string id;
+    array<SOCKET, 2> players{};
+    int player_count = 0;
+    vector<vector<CellState>> board;
+    mutex room_mutex;
     SOCKET current_turn_player = INVALID_SOCKET;
     int moves_count = 0;
 
 public:
-    GameRoom(const std::string& roomId) : id(roomId) {
-        board.resize(BOARD_SIZE, std::vector<CellState>(BOARD_SIZE, CellState::Empty));
+    GameRoom(const string& roomId)
+        : id(roomId), board(BOARD_SIZE, vector<CellState>(BOARD_SIZE, CellState::Empty)) {
+        players.fill(INVALID_SOCKET);
     }
-
-    std::string getId() const { return id; }
-    SOCKET getPlayerX() const { return players.empty() ? INVALID_SOCKET : players[0]; }
-    SOCKET getPlayerO() const { return players.size() > 1 ? players[1] : INVALID_SOCKET; }
+    string getId() const { return id; }
+    SOCKET getPlayerX() const { return players[0]; }
+    SOCKET getPlayerO() const { return players[1]; }
     SOCKET getCurrentTurn() const { return current_turn_player; }
-    bool isFull() const { return players.size() >= 2; }
+    bool isFull() const { return player_count == 2; }
 
     bool addPlayer(SOCKET clientSocket) {
-        std::lock_guard<std::mutex> lock(room_mutex);
+        lock_guard<mutex> lock(room_mutex);
         if (isFull()) return false;
-        players.push_back(clientSocket);
-
-        if (players.size() == 2) {
-            // Khi đủ 2 người, bắt đầu game và xác định lượt đi
-            current_turn_player = players[0]; // Player X đi trước
-        }
-        std::cout << "[GameRoom " << id << "] Player added: " << clientSocket << ". Total: " << players.size() << std::endl;
+        players[player_count++] = clientSocket;
+        if (player_count == 2)
+            current_turn_player = players[0];
+        cout << "[GameRoom " << id << "] Player added: " << clientSocket << ". Total: " << player_count << endl;
         return true;
     }
 
     void removePlayer(SOCKET clientSocket) {
-        std::lock_guard<std::mutex> lock(room_mutex);
-        players.erase(std::remove(players.begin(), players.end(), clientSocket), players.end());
-    }
-
-    // Gửi tin nhắn đến tất cả người chơi trong phòng
-    void broadcast(const std::string& message, SOCKET exclude = INVALID_SOCKET) {
-        std::lock_guard<std::mutex> lock(room_mutex);
-        for (SOCKET player : players) {
-            if (player != exclude) {
-                send_message(player, message);
+        lock_guard<mutex> lock(room_mutex);
+        for (int i = 0; i < 2; ++i) {
+            if (players[i] == clientSocket) {
+                players[i] = INVALID_SOCKET;
+                --player_count;
+                break;
             }
         }
     }
 
-    // Xử lý nước đi
-    bool makeMove(SOCKET clientSocket, int x, int y) {
-        std::lock_guard<std::mutex> lock(room_mutex);
+    void broadcast(const string& message, SOCKET exclude = INVALID_SOCKET) {
+        lock_guard<mutex> lock(room_mutex);
+        for (auto player : players)
+            if (player != INVALID_SOCKET && player != exclude)
+                send_message(player, message);
+    }
 
-        if (!isFull() || clientSocket != current_turn_player) {
-            return false; // Chưa đủ người hoặc không phải lượt
-        }
-        if (x < 0 || x >= BOARD_SIZE || y < 0 || y >= BOARD_SIZE || board[x][y] != CellState::Empty) {
-            return false; // Nước đi không hợp lệ
-        }
+    bool makeMove(SOCKET clientSocket, int x, int y) {
+        lock_guard<mutex> lock(room_mutex);
+        if (!isFull() || clientSocket != current_turn_player)
+            return false;
+        if (x < 0 || x >= BOARD_SIZE || y < 0 || y >= BOARD_SIZE || board[x][y] != CellState::Empty)
+            return false;
 
         PlayerMark mark = (clientSocket == getPlayerX()) ? PlayerMark::X : PlayerMark::O;
         board[x][y] = (mark == PlayerMark::X) ? CellState::X : CellState::O;
         moves_count++;
 
-        // 1. Thông báo nước đi hợp lệ cho cả hai người chơi
-        std::string move_msg = "MOVE_OK " + std::to_string(x) + " " + std::to_string(y) + " " + ((mark == PlayerMark::X) ? "X" : "O");
-        broadcast(move_msg);
+        string update_msg = "UPDATE_BOARD " + to_string(x) + " " + to_string(y) + " " + ((mark == PlayerMark::X) ? "X" : "O");
+        broadcast(update_msg);
 
-        // 2. Kiểm tra thắng/thua
         if (checkWin(x, y)) {
-            std::string winner_mark = (mark == PlayerMark::X) ? "X" : "O";
-            broadcast("GAME_OVER WINNER " + winner_mark);
-            // Reset game state or prepare for cleanup
+            broadcast("GAME_OVER WINNER " + string(1, (mark == PlayerMark::X) ? 'X' : 'O'));
             current_turn_player = INVALID_SOCKET;
             return true;
         }
-
-        // 3. Kiểm tra hòa
         if (moves_count == BOARD_SIZE * BOARD_SIZE) {
             broadcast("GAME_OVER DRAW");
             current_turn_player = INVALID_SOCKET;
             return true;
         }
 
-        // 4. Chuyển lượt (FIXED LOGIC)
-        SOCKET next_player = (current_turn_player == getPlayerX()) ? getPlayerO() : getPlayerX();
-        current_turn_player = next_player;
-
-        // Chỉ gửi "YOUR_TURN" đến người chơi có lượt tiếp theo
-        send_message(next_player, "YOUR_TURN");
-
+        current_turn_player = (current_turn_player == getPlayerX()) ? getPlayerO() : getPlayerX();
+        send_message(current_turn_player, "YOUR_TURN");
         return true;
     }
 
 private:
-    // Kiểm tra thắng (FIXED LOGIC)
     bool checkWin(int x, int y) {
         CellState mark = board[x][y];
         if (mark == CellState::Empty) return false;
-
-        // Tọa độ các hướng để kiểm tra (ngang, dọc, chéo chính, chéo phụ)
-        int dx[] = { 1, 0, 1, 1 };
-        int dy[] = { 0, 1, 1, -1 };
-
-        for (int i = 0; i < 4; ++i) {
+        const int dx[] = { 1, 0, 1, 1 }, dy[] = { 0, 1, 1, -1 };
+        for (int dir = 0; dir < 4; ++dir) {
             int count = 1;
-            // Đếm theo hướng (dx[i], dy[i])
-            for (int j = 1; j < WIN_CONDITION; ++j) {
-                int nx = x + j * dx[i];
-                int ny = y + j * dy[i];
-                if (nx >= 0 && nx < BOARD_SIZE && ny >= 0 && ny < BOARD_SIZE && board[nx][ny] == mark) {
-                    count++;
-                }
-                else {
-                    break;
-                }
+            for (int step = 1; step < WIN_CONDITION; ++step) {
+                int nx = x + step * dx[dir], ny = y + step * dy[dir];
+                if (nx >= 0 && nx < BOARD_SIZE && ny >= 0 && ny < BOARD_SIZE && board[nx][ny] == mark)
+                    ++count;
+                else break;
             }
-            // Đếm theo hướng ngược lại
-            for (int j = 1; j < WIN_CONDITION; ++j) {
-                int nx = x - j * dx[i];
-                int ny = y - j * dy[i];
-                if (nx >= 0 && nx < BOARD_SIZE && ny >= 0 && ny < BOARD_SIZE && board[nx][ny] == mark) {
-                    count++;
-                }
-                else {
-                    break;
-                }
+            for (int step = 1; step < WIN_CONDITION; ++step) {
+                int nx = x - step * dx[dir], ny = y - step * dy[dir];
+                if (nx >= 0 && nx < BOARD_SIZE && ny >= 0 && ny < BOARD_SIZE && board[nx][ny] == mark)
+                    ++count;
+                else break;
             }
             if (count >= WIN_CONDITION) return true;
         }
@@ -179,224 +147,107 @@ private:
     }
 };
 
-// --- Lớp RoomManager (Singleton) ---
+// --- RoomManager Singleton ---
 class RoomManager {
-private:
-    std::unordered_map<std::string, std::shared_ptr<GameRoom>> rooms;
-    std::unordered_map<SOCKET, std::string> client_to_room;
-    std::mutex manager_mutex;
-
-    RoomManager() {
-        srand(time(NULL));
-    }
-
+    unordered_map<string, shared_ptr<GameRoom>> rooms;
+    unordered_map<SOCKET, string> client_to_room;
+    mutex manager_mutex;
+    RoomManager() { srand(static_cast<unsigned>(time(nullptr))); }
 public:
     static RoomManager* getInstance() {
         static RoomManager instance;
         return &instance;
     }
-
-    std::string generateRoomId() {
-        return std::to_string(rand() % 9000 + 1000); // ID 4 chữ số từ 1000-9999
+    string generateRoomId() {
+        return to_string(rand() % 9000 + 1000);
     }
-
-    std::shared_ptr<GameRoom> createRoom(SOCKET clientSocket) {
-        std::lock_guard<std::mutex> lock(manager_mutex);
-        std::string newId;
-        do {
-            newId = generateRoomId();
-        } while (rooms.count(newId)); // Đảm bảo ID không trùng
-
-        auto room = std::make_shared<GameRoom>(newId);
+    shared_ptr<GameRoom> createRoom(SOCKET clientSocket) {
+        lock_guard<mutex> lock(manager_mutex);
+        if (rooms.size() >= 10) {
+            send_message(clientSocket, "ERROR ServerFull");
+            return nullptr;
+        }
+        string newId;
+        do { newId = generateRoomId(); } while (rooms.count(newId));
+        auto room = make_shared<GameRoom>(newId);
         rooms[newId] = room;
         room->addPlayer(clientSocket);
         client_to_room[clientSocket] = newId;
         return room;
     }
-
-    /**
-     * @brief Cho phép một client tham gia vào phòng đã có.
-     * @param roomId ID của phòng muốn tham gia.
-     * @param clientSocket Socket của người chơi muốn tham gia.
-     * @return true nếu tham gia thành công, false nếu thất bại.
-     */
-    bool joinRoom(const std::string& roomId, SOCKET clientSocket) {
-        std::lock_guard<std::mutex> lock(manager_mutex);
-
-        // Kiểm tra xem phòng có tồn tại không VÀ phòng chưa đầy (chưa có 2 người)
-        if (rooms.count(roomId) && !rooms[roomId]->isFull()) {
-            // Thêm người chơi mới vào phòng trong lớp GameRoom
-            rooms[roomId]->addPlayer(clientSocket);
-            // Lưu lại thông tin client này đã vào phòng nào
+    bool joinRoom(const string& roomId, SOCKET clientSocket) {
+        lock_guard<mutex> lock(manager_mutex);
+        if (rooms.count(roomId) && rooms[roomId]->addPlayer(clientSocket)) {
             client_to_room[clientSocket] = roomId;
-
             auto room = rooms[roomId];
-
-            // Nếu phòng đã đủ người, bắt đầu game
             if (room->isFull()) {
-                // Lấy socket của người chơi 1 (X) và người chơi 2 (O)
-                SOCKET playerX = room->getPlayerX();
-                SOCKET playerO = room->getPlayerO();
-
-                // Gửi thông điệp riêng cho từng người chơi để họ biết mình là X hay O.
-                send_message(playerX, "GAME_START YOU_ARE X");
-                send_message(playerO, "GAME_START YOU_ARE O");
-
-                // Theo luật, X luôn đi trước. Gửi tin nhắn lượt đi cho X.
-                send_message(playerX, "YOUR_TURN");
+                send_message(room->getPlayerX(), "GAME_START X");
+                send_message(room->getPlayerO(), "GAME_START O");
+                send_message(room->getPlayerX(), "YOUR_TURN");
             }
-            return true; // Trả về true báo hiệu tham gia phòng thành công
+            return true;
         }
-
-        return false; // Trả về false nếu phòng không tồn tại hoặc đã đầy
+        return false;
     }
-
     void unregisterClient(SOCKET clientSocket) {
-        std::lock_guard<std::mutex> lock(manager_mutex);
+        lock_guard<mutex> lock(manager_mutex);
         if (client_to_room.count(clientSocket)) {
-            std::string roomId = client_to_room[clientSocket];
+            string roomId = client_to_room[clientSocket];
             if (rooms.count(roomId)) {
                 auto room = rooms[roomId];
                 room->removePlayer(clientSocket);
                 room->broadcast("OPPONENT_LEFT");
-
-                // Nếu phòng không còn đủ người chơi, xóa phòng
                 if (room->getPlayerX() == INVALID_SOCKET || room->getPlayerO() == INVALID_SOCKET) {
                     rooms.erase(roomId);
-                    std::cout << "[RoomManager] Room deleted: " << roomId << std::endl;
                 }
             }
             client_to_room.erase(clientSocket);
         }
     }
-
-    std::shared_ptr<GameRoom> getRoomByClient(SOCKET clientSocket) {
-        std::lock_guard<std::mutex> lock(manager_mutex);
-        if (client_to_room.count(clientSocket) && rooms.count(client_to_room[clientSocket])) {
+    shared_ptr<GameRoom> getRoomByClient(SOCKET clientSocket) {
+        lock_guard<mutex> lock(manager_mutex);
+        if (client_to_room.count(clientSocket) && rooms.count(client_to_room[clientSocket]))
             return rooms[client_to_room[clientSocket]];
-        }
         return nullptr;
     }
 };
-// --- Hàm xử lý client (ClientHandler) ---
-void handle_client(SOCKET clientSocket);
 
-int main() {
-#ifdef _WIN32
-    WSADATA wsaData;
-    if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
-        std::cerr << "[ERROR] WSAStartup that bai." << std::endl;
-        return 1;
-    }
-    std::cout << "[INFO] Khoi tao Winsock thanh cong." << std::endl;
-#endif
-
-    SOCKET serverSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-    if (serverSocket == INVALID_SOCKET) {
-        std::cerr << "[ERROR] Khong the tao socket." << std::endl;
-        return 1;
-    }
-    std::cout << "[INFO] Tao socket server thanh cong." << std::endl;
-
-    sockaddr_in serverAddr;
-    serverAddr.sin_family = AF_INET;
-    serverAddr.sin_port = htons(PORT);
-    serverAddr.sin_addr.s_addr = INADDR_ANY;
-
-    if (bind(serverSocket, (struct sockaddr*)&serverAddr, sizeof(serverAddr)) == SOCKET_ERROR) {
-        std::cerr << "[ERROR] Bind that bai." << std::endl;
-        closesocket(serverSocket);
-        return 1;
-    }
-    std::cout << "[BIND] Server da gan dia chi tai port " << PORT << std::endl;
-
-    if (listen(serverSocket, SOMAXCONN) == SOCKET_ERROR) {
-        std::cerr << "[ERROR] Listen that bai." << std::endl;
-        closesocket(serverSocket);
-        return 1;
-    }
-    std::cout << "[LISTENING] Server dang lang nghe ket noi..." << std::endl;
-
-    while (true) {
-        sockaddr_in clientAddr;
-        socklen_t clientAddrSize = sizeof(clientAddr);
-        SOCKET clientSocket = accept(serverSocket, (struct sockaddr*)&clientAddr, &clientAddrSize);
-
-        if (clientSocket == INVALID_SOCKET) {
-            std::cerr << "[WARNING] Accept that bai." << std::endl;
-            continue;
-        }
-
-        char clientIp[INET_ADDRSTRLEN];
-        inet_ntop(AF_INET, &clientAddr.sin_addr, clientIp, INET_ADDRSTRLEN);
-        std::cout << "[NEW CONNECTION] Chap nhan ket noi tu " << clientIp << ":" << ntohs(clientAddr.sin_port) << " (Socket: " << clientSocket << ")" << std::endl;
-
-        std::thread clientThread(handle_client, clientSocket);
-        clientThread.detach();
-    }
-
-    closesocket(serverSocket);
-#ifdef _WIN32
-    WSACleanup();
-#endif
-    return 0;
-}
-
+// --- Client handler ---
 void handle_client(SOCKET clientSocket) {
     RoomManager* manager = RoomManager::getInstance();
-    send_message(clientSocket, "WELCOME CaroServer 5x5");
-
+    send_message(clientSocket, "WELCOME CaroServer 3x3");
     char buffer[BUFFER_SIZE];
     int bytesReceived;
-    std::string leftover_data;
-
+    string leftover;
     do {
         bytesReceived = recv(clientSocket, buffer, BUFFER_SIZE - 1, 0);
         if (bytesReceived > 0) {
             buffer[bytesReceived] = '\0';
-            leftover_data += buffer;
-
-            size_t newline_pos;
-            while ((newline_pos = leftover_data.find('\n')) != std::string::npos) {
-                std::string line = leftover_data.substr(0, newline_pos);
-                leftover_data.erase(0, newline_pos + 1);
-
-                if (line.back() == '\r') line.pop_back();
+            leftover += buffer;
+            size_t pos;
+            while ((pos = leftover.find('\n')) != string::npos) {
+                string line = leftover.substr(0, pos);
+                leftover.erase(0, pos + 1);
+                if (!line.empty() && line.back() == '\r') line.pop_back();
                 if (line.empty()) continue;
-
-                // Bắt đầu quá trình DECODE. Nạp chuỗi nhận được vào stringstream.
-                std::stringstream ss(line);
-                std::string cmd;
-                // Ghi chú thêm: DECODE bước 1 - Lấy ra từ đầu tiên làm lệnh (cmd).
+                stringstream ss(line);
+                string cmd;
                 ss >> cmd;
-
-                std::cout << "[Recv " << clientSocket << "] " << line << std::endl;
-
                 if (cmd == "CREATE_ROOM") {
-                    // RoomManager sẽ tạo phòng và tự động thêm client này vào
                     auto room = manager->createRoom(clientSocket);
-                    // Gửi lại ID phòng để client biết
-                    send_message(clientSocket, "ROOM_CREATED " + room->getId());
-                    // Thông báo cho client chờ người khác (LOGIC MỚI)
-                    send_message(clientSocket, "WAITING_OPPONENT");
-                }
-                else if (cmd == "JOIN_ROOM") {
-                    std::string roomId;
-                    // DECODE bước 2 - Lấy ra từ tiếp theo làm tham số (roomId).
+                    if (room) send_message(clientSocket, "ROOM_CREATED " + room->getId());
+                } else if (cmd == "JOIN_ROOM") {
+                    string roomId;
                     ss >> roomId;
-                    if (manager->joinRoom(roomId, clientSocket)) {
-                        // Tham gia thành công, server sẽ tự động gửi GAME_START (LOGIC MỚI)
-                        // (Không cần gửi "JOINED_OK" nữa, vì hàm joinRoom sẽ tự gửi GAME_START)
-                    }
-                    else {
-                        // Phòng không tồn tại hoặc đã đầy
+                    if (roomId.empty()) {
+                        send_message(clientSocket, "ERROR MissingRoomId");
+                    } else if (manager->joinRoom(roomId, clientSocket)) {
+                        send_message(clientSocket, "JOINED_OK " + roomId);
+                    } else {
                         send_message(clientSocket, "ERROR CannotJoin " + roomId);
                     }
-                }
-
-                else if (cmd == "MOVE") {
+                } else if (cmd == "MOVE") {
                     int x, y;
-                    // DECODE bước 2 - Lấy ra 2 số tiếp theo làm tham số (x, y).
                     if (!(ss >> x >> y)) {
                         send_message(clientSocket, "ERROR InvalidMoveFormat");
                         continue;
@@ -409,15 +260,63 @@ void handle_client(SOCKET clientSocket) {
                     if (!room->makeMove(clientSocket, x, y)) {
                         send_message(clientSocket, "ERROR InvalidMoveOrTurn");
                     }
-                }
-                else {
+                } else {
                     send_message(clientSocket, "ERROR UnknownCommand " + cmd);
                 }
             }
         }
     } while (bytesReceived > 0);
-
-    std::cout << "[DISCONNECTED] Client (Socket: " << clientSocket << ") da ngat ket noi." << std::endl;
     manager->unregisterClient(clientSocket);
     closesocket(clientSocket);
+}
+
+int main() {
+#ifdef _WIN32
+    WSADATA wsaData;
+    if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
+        cerr << "[ERROR] WSAStartup failed." << endl;
+        return 1;
+    }
+#endif
+
+    SOCKET serverSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    if (serverSocket == INVALID_SOCKET) {
+        cerr << "[ERROR] Failed to create socket." << endl;
+        return 1;
+    }
+
+    sockaddr_in serverAddr{};
+    serverAddr.sin_family = AF_INET;
+    serverAddr.sin_port = htons(PORT);
+    serverAddr.sin_addr.s_addr = INADDR_ANY;
+
+    if (bind(serverSocket, (struct sockaddr*)&serverAddr, sizeof(serverAddr)) == SOCKET_ERROR) {
+        cerr << "[ERROR] Bind failed." << endl;
+        closesocket(serverSocket);
+        return 1;
+    }
+    if (listen(serverSocket, SOMAXCONN) == SOCKET_ERROR) {
+        cerr << "[ERROR] Listen failed." << endl;
+        closesocket(serverSocket);
+        return 1;
+    }
+    cout << "[SERVER] Listening on port " << PORT << "..." << endl;
+
+    while (true) {
+        sockaddr_in clientAddr{};
+        socklen_t clientAddrSize = sizeof(clientAddr);
+        SOCKET clientSocket = accept(serverSocket, (struct sockaddr*)&clientAddr, &clientAddrSize);
+        if (clientSocket == INVALID_SOCKET) {
+            cerr << "[WARNING] Accept failed." << endl;
+            continue;
+        }
+        thread clientThread(handle_client, clientSocket);
+        clientThread.detach();
+    }
+
+    closesocket(serverSocket);
+#ifdef _WIN32
+    WSACleanup();
+#endif
+    return 0;
 }

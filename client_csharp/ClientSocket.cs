@@ -12,224 +12,181 @@ namespace client_csharp
         private string serverIp;
         private int serverPort;
         private Thread? receiveThread;
-        private bool isRunning = true;
+        private bool isRunning = false;
 
-        // 🔹 Sự kiện gửi thông điệp đến Form
+        // Sự kiện gửi thông điệp đến Form (WinForms) hoặc Console
         public event Action<string>? OnServerMessage;
 
-        // 🔹 Hàm khởi tạo 
+        // Lưu trạng thái bàn cờ (3x3) - có thể dùng cho giao diện
+        public char[,] Board { get; } = new char[3, 3];
+
+        // Trạng thái lượt đi của mình (chỉ dùng cho console)
+        public bool IsMyTurn { get; private set; } = false;
+        public char MyMark { get; private set; } = '?'; // 'X' hoặc 'O'
+        public char OpponentMark { get; private set; } = '?';
+
         public ClientSocket(string ip, int port)
         {
             serverIp = ip;
             serverPort = port;
         }
 
-        // 🔹 Hàm kết nối tới server 
+        // Kết nối tới server
         public void ConnectToServer()
         {
             try
             {
-                Console.WriteLine($"Đang kết nối tới server {serverIp}:{serverPort} ...");
-
                 client = new TcpClient();
                 client.Connect(serverIp, serverPort);
                 stream = client.GetStream();
+                isRunning = true;
 
-                Console.WriteLine("✅ Đã kết nối thành công tới server!");
+                // Bắt đầu luồng nhận dữ liệu
+                receiveThread = new Thread(ReceiveLoop)
+                {
+                    IsBackground = true
+                };
+                receiveThread.Start();
 
-                // 🔄 Bắt đầu luồng nhận dữ liệu
-                StartReceiveLoop();
-            }
-            catch (SocketException ex)
-            {
-                Console.WriteLine($"❌ Không thể kết nối tới server: {ex.Message}");
+                OnServerMessage?.Invoke("CONNECTED");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"⚠️ Lỗi không xác định: {ex.Message}");
+                OnServerMessage?.Invoke("ERROR Không thể kết nối: " + ex.Message);
             }
         }
 
-        // 🔹 Bắt đầu luồng nhận dữ liệu từ server
-        private void StartReceiveLoop()
+        // Vòng lặp nhận dữ liệu
+        private void ReceiveLoop()
         {
-            receiveThread = new Thread(() =>
+            var buffer = new byte[2048];
+            StringBuilder leftover = new();
+            try
             {
-                try
+                while (isRunning)
                 {
-                    while (true)
+                    if (client == null || stream == null || !client.Connected) break;
+                    int bytesRead = stream.Read(buffer, 0, buffer.Length);
+                    if (bytesRead <= 0) break;
+                    string data = leftover + Encoding.UTF8.GetString(buffer, 0, bytesRead);
+                    int idx;
+                    while ((idx = data.IndexOf('\n')) >= 0)
                     {
-                        if (client == null || stream == null || !client.Connected)
-                            break;
-
-                        byte[] buffer = new byte[1024];
-                        int bytesRead = stream.Read(buffer, 0, buffer.Length);
-
-                        if (bytesRead == 0)
-                        {
-                            Console.WriteLine("⚠️ Server đã đóng kết nối bất ngờ.");
-                            Console.WriteLine("💔 Mất kết nối tới server. Vui lòng thử kết nối lại sau.");
-
-                            Disconnect();
-                            isRunning = false;
-                            Environment.Exit(0);
-                            break;
-                        }
-
-                        string message = Encoding.UTF8.GetString(buffer, 0, bytesRead);
-                        Console.WriteLine($"\n📩 Từ server: {message}");
-
-                        HandleServerMessage(message);
-                        OnServerMessage?.Invoke(message);
+                        string msg = data[..idx].Trim('\r');
+                        data = data[(idx + 1)..];
+                        HandleServerMessage(msg);
+                        OnServerMessage?.Invoke(msg);
                     }
+                    leftover.Clear();
+                    leftover.Append(data);
                 }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"⚠️ Lỗi khi nhận dữ liệu: {ex.Message}");
-                }
-            });
-
-            receiveThread.IsBackground = true;
-            receiveThread.Start();
-        }
-
-        // 🔹 Xử lý tất cả thông điệp từ server
-        private void HandleServerMessage(string message)
-        {
-            var messages = message.Split('\n');
-            foreach (var msg in messages)
+            }
+            catch (Exception ex)
             {
-                if (string.IsNullOrWhiteSpace(msg)) continue;
-
-                if (msg.Contains("OPPONENT_LEFT"))
-                {
-                    Console.WriteLine("⚠️ Đối thủ đã thoát khỏi phòng. Trận đấu bị gián đoạn.");
-                    Console.WriteLine("👉 Bạn có muốn quay lại sảnh không? (y/n)");
-
-                    Disconnect();
-                    isRunning = false;
-
-                    string choice = Console.ReadLine()?.Trim().ToLower();
-                    if (choice == "y")
-                    {
-                        Console.WriteLine("🏠 Đang trở về sảnh...");
-                    }
-                    else
-                    {
-                        Console.WriteLine("👋 Cảm ơn bạn đã chơi!");
-                        Environment.Exit(0);
-                    }
-                }
-                else if (msg.Contains("ERROR ServerFull"))
-                {
-                    Console.WriteLine("🚫 Server đang quá tải, không thể tạo phòng mới. Vui lòng thử lại sau.");
-                }
-                else if (msg.Contains("GAME_OVER"))
-                {
-                    Console.WriteLine("🏁 Trò chơi đã kết thúc: " + msg);
-                }
-                else if (msg.Contains("YOUR_TURN"))
-                {
-                    Console.WriteLine("🎯 Đến lượt bạn đánh!");
-                }
-                else if (msg.Contains("MOVE_OK"))
-                {
-                    Console.WriteLine($"✅ Nước đi hợp lệ: {msg}");
-                }
-                else if (msg.Contains("WELCOME"))
-                {
-                    Console.WriteLine($"👋 Kết nối thành công: {msg}");
-                }
-                else
-                {
-                    Console.WriteLine($"ℹ️ Thông điệp từ server: {msg}");
-                }
+                OnServerMessage?.Invoke("ERROR Mất kết nối tới server: " + ex.Message);
+            }
+            finally
+            {
+                Disconnect();
             }
         }
 
-        // 🔹 Gửi dữ liệu tới server
+        // Xử lý message từ server (cập nhật trạng thái, bàn cờ...)
+        private void HandleServerMessage(string msg)
+        {
+            if (string.IsNullOrWhiteSpace(msg)) return;
+
+            if (msg.StartsWith("UPDATE_BOARD"))
+            {
+                // UPDATE_BOARD x y X
+                var parts = msg.Split(' ');
+                if (parts.Length == 4 &&
+                    int.TryParse(parts[1], out int x) &&
+                    int.TryParse(parts[2], out int y))
+                {
+                    Board[x, y] = parts[3][0];
+                }
+            }
+            else if (msg.StartsWith("GAME_START"))
+            {
+                // GAME_START X hoặc GAME_START O
+                if (msg.Trim().EndsWith("X")) { MyMark = 'X'; OpponentMark = 'O'; }
+                else if (msg.Trim().EndsWith("O")) { MyMark = 'O'; OpponentMark = 'X'; }
+                else { MyMark = '?'; OpponentMark = '?'; }
+                IsMyTurn = false; // Chờ đến khi nhận "YOUR_TURN" mới được đi
+            }
+            else if (msg.Contains("YOUR_TURN"))
+            {
+                IsMyTurn = true;
+            }
+            else if (msg.StartsWith("GAME_OVER"))
+            {
+                IsMyTurn = false;
+            }
+            else if (msg.Contains("OPPONENT_LEFT"))
+            {
+                IsMyTurn = false;
+            }
+        }
+
+        // Gửi lệnh tới server
         public void SendData(string message)
         {
             try
             {
                 if (client != null && stream != null && client.Connected)
                 {
+                    if (!message.EndsWith("\n")) message += "\n";
                     byte[] data = Encoding.UTF8.GetBytes(message);
                     stream.Write(data, 0, data.Length);
                 }
                 else
                 {
-                    Console.WriteLine("⚠️ Không thể gửi: chưa kết nối hoặc đã mất kết nối.");
-                }
-            }
-            catch (ObjectDisposedException)
-            {
-                Console.WriteLine("⚠️ Kết nối đã bị đóng. Không thể gửi dữ liệu.");
-            }
-            catch (SocketException ex)
-            {
-                Console.WriteLine($"⚠️ Lỗi mạng: {ex.Message}");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"⚠️ Lỗi khi gửi dữ liệu: {ex.Message}");
-            }
-        }
-
-        // 🔹 Nhận dữ liệu (nếu cần đọc tức thì)
-        public string ReceiveData()
-        {
-            try
-            {
-                byte[] buffer = new byte[1024];
-                if (stream == null) return string.Empty;
-                int bytesRead = stream.Read(buffer, 0, buffer.Length);
-                if (bytesRead > 0)
-                {
-                    return Encoding.UTF8.GetString(buffer, 0, bytesRead);
+                    OnServerMessage?.Invoke("ERROR Không thể gửi: chưa kết nối hoặc đã mất kết nối.");
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"⚠️ Lỗi nhận dữ liệu: {ex.Message}");
+                OnServerMessage?.Invoke("ERROR Lỗi gửi dữ liệu: " + ex.Message);
             }
-            return string.Empty;
         }
 
-        // 🔹 Vòng lặp game (console)
+        // Bắt đầu vòng lặp game console (nếu cần)
         public void StartGameLoop()
         {
-            Console.WriteLine("🎮 Bắt đầu chơi. Nhập tin nhắn hoặc nước đi (vd: 0,2). Gõ 'exit' để thoát.");
-
+            Console.WriteLine("🎮 Bắt đầu chơi. Nhập lệnh (CREATE_ROOM, JOIN_ROOM <id>, MOVE x y, exit):");
             while (isRunning)
             {
-                string? input = Console.ReadLine();
-                if (string.IsNullOrWhiteSpace(input))
-                    continue;
-
-                if (input.Trim().ToLower() == "exit")
+                if (IsMyTurn)
                 {
-                    Disconnect();
-                    break;
+                    Console.Write("Nhập nước đi (x y): ");
+                    string? input = Console.ReadLine();
+                    if (string.IsNullOrWhiteSpace(input)) continue;
+                    if (input.Trim().ToLower() == "exit")
+                    {
+                        Disconnect();
+                        break;
+                    }
+                    SendData("MOVE " + input);
+                    IsMyTurn = false;
                 }
-
-                SendData(input);
+                else
+                {
+                    Thread.Sleep(100);
+                }
             }
         }
 
-        // 🔹 Hàm ngắt kết nối
         public void Disconnect()
         {
+            isRunning = false;
             try
             {
                 stream?.Close();
                 client?.Close();
-                Console.WriteLine("🔌 Đã ngắt kết nối với server.");
+                OnServerMessage?.Invoke("DISCONNECTED");
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"⚠️ Lỗi khi ngắt kết nối: {ex.Message}");
-            }
+            catch { }
         }
     }
 }

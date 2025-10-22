@@ -135,6 +135,30 @@ namespace client_csharp
                 else if (msg.Contains("GAME_OVER"))
                 {
                     Console.WriteLine("🏁 Trò chơi đã kết thúc: " + msg);
+                
+                    if (msg.Contains("WINNER"))
+                    {
+                        string winner = msg.Contains("X") ? "Người chơi X" : "Người chơi O";
+                        Console.WriteLine($"🎉 {winner} đã chiến thắng!");
+                
+                        // Nếu có giao diện WinForms:
+                        // MessageBox.Show($"{winner} đã thắng!", "Kết quả", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                    else if (msg.Contains("DRAW"))
+                    {
+                        Console.WriteLine("🤝 Trận đấu kết thúc với tỉ số hòa!");
+                        // Nếu có giao diện WinForms:
+                        // MessageBox.Show("Trận đấu hòa!", "Kết quả", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                
+                    // Sau khi kết thúc, dừng game và reset trạng thái
+                    isRunning = false;
+                    Console.WriteLine("🔁 Game đã kết thúc. Bạn có thể tạo hoặc tham gia phòng mới.");
+                }
+            // Sau khi kết thúc, dừng game và reset trạng thái
+            isRunning = false;
+            Console.WriteLine("🔁 Game đã kết thúc. Bạn có thể tạo hoặc tham gia phòng mới.");
+        }
                 }
                 else if (msg.Contains("YOUR_TURN"))
                 {

@@ -372,10 +372,6 @@ void handle_client(SOCKET clientSocket) {
 
                 std::cout << "[Recv " << clientSocket << "] " << line << std::endl;
 
-                // ==========================================================
-                // BẮT ĐẦU PHẦN CODE ĐƯỢC THAY THẾ
-                // ==========================================================
-
                 if (cmd == "CREATE_ROOM") {
                     // RoomManager sẽ tạo phòng và tự động thêm client này vào
                     auto room = manager->createRoom(clientSocket);
@@ -397,10 +393,6 @@ void handle_client(SOCKET clientSocket) {
                         send_message(clientSocket, "ERROR CannotJoin " + roomId);
                     }
                 }
-
-                // ==========================================================
-                // KẾT THÚC PHẦN CODE ĐƯỢC THAY THẾ
-                // ==========================================================
 
                 else if (cmd == "MOVE") {
                     int x, y;

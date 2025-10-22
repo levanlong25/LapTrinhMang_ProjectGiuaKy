@@ -364,7 +364,7 @@ void handle_client(SOCKET clientSocket) {
                 if (line.back() == '\r') line.pop_back();
                 if (line.empty()) continue;
 
-                // Ghi chú thêm: Bắt đầu quá trình DECODE. Nạp chuỗi nhận được vào stringstream.
+                // Bắt đầu quá trình DECODE. Nạp chuỗi nhận được vào stringstream.
                 std::stringstream ss(line);
                 std::string cmd;
                 // Ghi chú thêm: DECODE bước 1 - Lấy ra từ đầu tiên làm lệnh (cmd).
@@ -382,7 +382,7 @@ void handle_client(SOCKET clientSocket) {
                 }
                 else if (cmd == "JOIN_ROOM") {
                     std::string roomId;
-                    // Ghi chú thêm: DECODE bước 2 - Lấy ra từ tiếp theo làm tham số (roomId).
+                    // DECODE bước 2 - Lấy ra từ tiếp theo làm tham số (roomId).
                     ss >> roomId;
                     if (manager->joinRoom(roomId, clientSocket)) {
                         // Tham gia thành công, server sẽ tự động gửi GAME_START (LOGIC MỚI)
@@ -396,7 +396,7 @@ void handle_client(SOCKET clientSocket) {
 
                 else if (cmd == "MOVE") {
                     int x, y;
-                    // Ghi chú thêm: DECODE bước 2 - Lấy ra 2 số tiếp theo làm tham số (x, y).
+                    // DECODE bước 2 - Lấy ra 2 số tiếp theo làm tham số (x, y).
                     if (!(ss >> x >> y)) {
                         send_message(clientSocket, "ERROR InvalidMoveFormat");
                         continue;

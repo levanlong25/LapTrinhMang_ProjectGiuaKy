@@ -66,7 +66,15 @@ namespace client_csharp
 
                         if (bytesRead == 0)
                         {
-                            Console.WriteLine("⚠️ Server đã đóng kết nối.");
+                            Console.WriteLine("⚠️ Server đã đóng kết nối bất ngờ.");
+                            Console.WriteLine("💔 Mất kết nối tới server. Vui lòng thử kết nối lại sau.");
+
+                            // Ngắt kết nối an toàn
+                            Disconnect();
+
+                            // Thoát chương trình hoặc trở về menu chính
+                            isRunning = false;
+                            Environment.Exit(0);
                             break;
                         }
 

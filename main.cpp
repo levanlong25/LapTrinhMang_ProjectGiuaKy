@@ -86,7 +86,7 @@ public:
     }
 
     void broadcast(const string& message, SOCKET exclude = INVALID_SOCKET) {
-        lock_guard<mutex> lock(room_mutex);
+        //lock_guard<mutex> lock(room_mutex);
         for (auto player : players)
             if (player != INVALID_SOCKET && player != exclude)
                 send_message(player, message);

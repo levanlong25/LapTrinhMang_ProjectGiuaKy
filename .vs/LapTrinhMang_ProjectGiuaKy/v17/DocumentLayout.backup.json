@@ -3,16 +3,12 @@
   "WorkspaceRootPath": "D:\\VUNGUYEN\\LTMang\\LapTrinhMang_ProjectGiuaKy\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\VUNGUYEN\\LTMang\\LapTrinhMang_ProjectGiuaKy\\server_cpp\\CaroGame.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:server_cpp\\CaroGame.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\VUNGUYEN\\LTMang\\LapTrinhMang_ProjectGiuaKy\\client_csharp\\ClientSocket.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:client_csharp\\ClientSocket.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\VUNGUYEN\\LTMang\\LapTrinhMang_ProjectGiuaKy\\server_cpp\\CaroGame.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:server_cpp\\CaroGame.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\VUNGUYEN\\LTMang\\LapTrinhMang_ProjectGiuaKy\\server_cpp\\main.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:server_cpp\\main.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\VUNGUYEN\\LTMang\\LapTrinhMang_ProjectGiuaKy\\client_csharp\\GameForm.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:client_csharp\\GameForm.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     }
   ],
   "DocumentGroupContainers": [
@@ -22,45 +18,32 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 0,
+          "SelectedChildIndex": 1,
           "Children": [
             {
               "$type": "Document",
-              "DocumentIndex": 0,
-              "Title": "CaroGame.h",
-              "DocumentMoniker": "D:\\VUNGUYEN\\LTMang\\LapTrinhMang_ProjectGiuaKy\\server_cpp\\CaroGame.h",
-              "RelativeDocumentMoniker": "server_cpp\\CaroGame.h",
-              "ToolTip": "D:\\VUNGUYEN\\LTMang\\LapTrinhMang_ProjectGiuaKy\\server_cpp\\CaroGame.h",
-              "RelativeToolTip": "server_cpp\\CaroGame.h",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA8AAAACAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
-              "WhenOpened": "2025-10-20T02:46:05.655Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
               "DocumentIndex": 1,
-              "Title": "CaroGame.cpp",
-              "DocumentMoniker": "D:\\VUNGUYEN\\LTMang\\LapTrinhMang_ProjectGiuaKy\\server_cpp\\CaroGame.cpp",
-              "RelativeDocumentMoniker": "server_cpp\\CaroGame.cpp",
-              "ToolTip": "D:\\VUNGUYEN\\LTMang\\LapTrinhMang_ProjectGiuaKy\\server_cpp\\CaroGame.cpp",
-              "RelativeToolTip": "server_cpp\\CaroGame.cpp",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAACEAAAAFAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
-              "WhenOpened": "2025-10-16T11:19:38.6Z",
+              "Title": "GameForm.cs",
+              "DocumentMoniker": "D:\\VUNGUYEN\\LTMang\\LapTrinhMang_ProjectGiuaKy\\client_csharp\\GameForm.cs",
+              "RelativeDocumentMoniker": "client_csharp\\GameForm.cs",
+              "ToolTip": "D:\\VUNGUYEN\\LTMang\\LapTrinhMang_ProjectGiuaKy\\client_csharp\\GameForm.cs",
+              "RelativeToolTip": "client_csharp\\GameForm.cs",
+              "ViewState": "AgIAAJ4AAAAAAAAAAAAAALEAAAAQAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-10-20T16:24:45.399Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
-              "Title": "main.cpp",
-              "DocumentMoniker": "D:\\VUNGUYEN\\LTMang\\LapTrinhMang_ProjectGiuaKy\\server_cpp\\main.cpp",
-              "RelativeDocumentMoniker": "server_cpp\\main.cpp",
-              "ToolTip": "D:\\VUNGUYEN\\LTMang\\LapTrinhMang_ProjectGiuaKy\\server_cpp\\main.cpp",
-              "RelativeToolTip": "server_cpp\\main.cpp",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAoAAAAQAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
-              "WhenOpened": "2025-10-16T11:19:34.403Z",
+              "DocumentIndex": 0,
+              "Title": "ClientSocket.cs",
+              "DocumentMoniker": "D:\\VUNGUYEN\\LTMang\\LapTrinhMang_ProjectGiuaKy\\client_csharp\\ClientSocket.cs",
+              "RelativeDocumentMoniker": "client_csharp\\ClientSocket.cs",
+              "ToolTip": "D:\\VUNGUYEN\\LTMang\\LapTrinhMang_ProjectGiuaKy\\client_csharp\\ClientSocket.cs",
+              "RelativeToolTip": "client_csharp\\ClientSocket.cs",
+              "ViewState": "AgIAAM4AAAAAAAAAAAAYwNkAAAAsAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-10-20T16:13:03.079Z",
               "EditorCaption": ""
             }
           ]
